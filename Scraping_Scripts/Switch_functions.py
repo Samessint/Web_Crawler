@@ -30,74 +30,53 @@ from selenium.webdriver.common.action_chains import ActionChains
 # --- Menu crawling ---
 
 
-# [0] Obtains links from navbar
+# [0] Obtains span links from navbar
 
-def switch_menu_crawl(main_URL, menu_items_list) -> list:
+def span_crawl_text(main_URL, menu_items_list) -> list:
+    
+    # Open webpage
+    opts = ChromeOptions()
+    opts.add_argument("--start-maximized")
+    driver = webdriver.Chrome(ChromeDriverManager().install(), options=opts)
+    driver.get(main_URL)
+    time.sleep(1)
+    
+    # Open menu
+    css_selector = "span.ml-2.text-gray-90 span.ec.ec-arrow-down-search"
+    dropdown_menu = driver.find_element_by_css_selector(css_selector)
+    dropdown_menu.click()
+    time.sleep(1)
 
-    try:
-        # Create driver instance
-        opts = ChromeOptions()
-        opts.add_argument("--start-maximized")
-        driver = webdriver.Chrome(ChromeDriverManager().install(), options=opts)
-        driver.get(main_URL)
-        time.sleep(3)
+    link_list = []
+    actions = ActionChains(driver)
 
-        # Open menu
-        dropdown_menu =
+    for category in menu_items_list:
+
+        # Locate category
+        category_obj = driver.find_element_by_xpath(f"//span[text()='{category}']")
+        category_obj.click()
         time.sleep(1)
+        
+        link_list.append(driver.current_url)
+                
+        # Open menu
+        css_selector = "span.ml-2.text-gray-90 span.ec.ec-arrow-down-search"
+        dropdown_menu = driver.find_element_by_css_selector(css_selector)
         dropdown_menu.click()
         time.sleep(1)
 
-        HTML_master_block = []
-
-        # Open first link and obtain inner HTML
-        actions = ActionChains(driver)
-
-        for category in menu_items_list:
-            category_obj = 
-            actions.move_to_element(category_obj).perform()
-            list_item = 
-            html_content = list_item.get_attribute("innerHTML")
-            HTML_master_block.append(BeautifulSoup(html_content, 'html.parser'))
-
-        driver.quit()
-
-        # HTML sub-category parsing
-        HREF_list = []
-        for HTML_soup in HTML_master_block:
-            HTML_soup_links = 
-            for h3_link in HTML_soup_links:
-                """"""
-
-        return HREF_list
+    driver.quit()
     
-    except Exception:
-        print(Exception)
+    return link_list
 
 
 # --- Product parsing ---
 
 
-# Backend
-
-
-# [A] Filters graves matching product class inheritance
-
-def switch_filter_graves(graveyard) -> list:
-    
-    # Step 2: Function to filter out only graves conforming to product div convention
-    filtered_graves = []
-    for grave in graveyard:
-        if '' in grave:
-            filtered_graves.append(f">>>{grave}")
-
-    return filtered_graves
-
-
 # Functional
 
 
-# [1] Creates a grave for a specific page
+# [1] Creates a grave for a specific page [already filtered]
 
 def switch_grave_list(crawl_URL) -> list:
     
@@ -111,31 +90,28 @@ def switch_grave_list(crawl_URL) -> list:
         driver.get(crawl_URL)
         time.sleep(random_time)
         
+        # Infinite scroll
+
+        js_scroll_bottom = "window.scrollTo(0, document.body.scrollHeight)"
+
+        while True:
+            driver.execute_script(js_scroll_bottom)
+            try:
+                driver.find_element_by_xpath("//div[text()=' BACK TO TOP ']")
+            except:
+                pass
+            else:
+                break            
+        
         try:
-            html_content = [driver.page_source]
+            div_content = driver.find_element_by_xpath("//div[@class='cx-product-container']")
+            html_content = div_content.get_attribute('innerHTML')
         except:
             print(f'Could not obtain site resources: {crawl_URL}')
 
-        js_code = "arguments[0].scrollIntoView(true); window.scrollBy(0, -200);"
-
-        while True:
-
-            try:
-
-                driver.execute_script(js_code, show_more)
-                time.sleep(random_time)
- 
-                # confirm staleness of last img in page
-                html_content.append(driver.page_source)
-
-            except Exception as error:
-                print(f'{crawl_URL} page end detected')
-                break
-
         driver.quit()
 
-        html_content = ' '.join(html_content)
-        list_graves = list(set(str(BeautifulSoup(html.unescape(html_content), 'html.parser')).split('<li class')))
+        list_graves = BeautifulSoup(html_content, 'html.parser').find_all('div', class_='product-item__body pb-xl-2')
 
         return list_graves
     
@@ -143,14 +119,12 @@ def switch_grave_list(crawl_URL) -> list:
         print(Exception)
 
 
-# [2] Crawls through a list of links and creates product class filtered graves for each webpage: HEAVY OPERATION <ONLY RUN WHEN 100% SURE>
+# [2] Crawls through a list of links and creates product class graves for each webpage: HEAVY OPERATION <ONLY RUN WHEN 100% SURE>
 
 def switch_link_crawl(listed_links) -> list(list()):
     
-    # Step 3: For each link in the list, perform grave_list splitting, filtering, and store in graveyard
-    filtered_graveyard = []
-    for link in listed_links:
-        filtered_graveyard.append(switch_filter_graves(switch_grave_list(link)))
+    # Step 3: For each link in the list, perform grave_list splitting and store in graveyard
+    filtered_graveyard = [switch_grave_list(link) for link in listed_links]
     
     return filtered_graveyard
 
@@ -160,17 +134,17 @@ def switch_cemetary_product_parse(filtered_cemetary) -> dict:
     
     # Step 4: Parse information to build the product dictionary
     product_dictionary = {}
-    
+
     for graveyard in filtered_cemetary:
         for filtered_grave in graveyard:
 
-            soup = BeautifulSoup(filtered_grave, 'html.parser')
+            soup = BeautifulSoup(str(filtered_grave), 'html.parser')
 
             # product_name
-            p_tag = s
-            p_text = p_tag.get_text(strip=True)
+            a_tag = soup.find('a', class_='cx-product-name')
+            a_text = a_tag.get_text(strip=True)
 
-            product_dictionary[p_text] = {
+            product_dictionary[a_text] = {
                 'product_brand':'', 
                 'product_price':'', 
                 'product_discount':'', 
@@ -180,64 +154,59 @@ def switch_cemetary_product_parse(filtered_cemetary) -> dict:
                 'product_image':''
             }
 
-            # product_brand
+            # product_brand [might not always work]
             try:
-                h5_tag = soup.find(
-                h5_text = h5_tag.get_text(strip=True)
-                product_dictionary[p_text]['product_brand'] = h5_text
-            except Exception as error:
+                product_dictionary[a_text]['product_brand'] = a_text.split(' ')[0]
+            except:
                 pass
 
             # product_price
             try:
-                span_tag = soup.find(
-                span_text = span_tag.get_text(strip=True)
-                product_dictionary[p_text]['product_price'] = span_text
-            except Exception as error:
+                div_tag = soup.find('div', class_='text-gray-100')
+                div_text= div_tag.get_text(strip=True)
+                product_dictionary[a_text]['product_price'] = div_text
+            except:
                 try:
-                    h4_tag = soup.find('h4')
-                    h4_text = h4_tag.get_text(strip=True)
-                    product_dictionary[p_text]['product_price'] = h4_text
-                except Exception as error:
+                    app_tag = soup.find('app-transform-arabic-number')
+                    app_text = app_tag.get_text(strip=True)
+                    product_dictionary[a_text]['product_price'] = app_text
+                except:
                     pass
-
-
-            # product_discount
-            try:
-                span_tag2 = soup.find(
-                span2_text = span_tag2.get_text(strip=True)
-                product_dictionary[p_text]['product_discount'] = span2_text
-            except Exception as error:
-                pass
 
             # price_before_discount
             try:
-                span_tag3 = soup.find(
-                span3_text = span_tag3.get_text(strip=True)
-                product_dictionary[p_text]['price_before_discount'] = span3_text
-            except Exception as error:
+                del_tag = soup.find('del', class_='font-size-12 tex-gray-6 position-absolute bottom-100')
+                del_text= del_tag.get_text(strip=True)
+                product_dictionary[a_text]['price_before_discount'] = del_text
+            except:
                 pass
-            
+
+            # product_discount
+            if product_dictionary[a_text]['product_price'] != '' and product_dictionary[a_text]['price_before_discount'] != '':
+                price_discount_int = float(product_dictionary[a_text]['product_price'].replace(',',''))
+                price_original_int = float(product_dictionary[a_text]['price_before_discount'].split(' ')[0].replace(',',''))
+                product_dictionary[a_text]['product_discount'] = str(round((1-(price_discount_int / price_original_int))*100,2))+'%'
+
             # in_out_stock
-            if '' in str(soup):
-                product_dictionary[p_text]['in_out_stock'] = 'out_of_stock'
+            if ' Add To Cart ' in str(soup):
+                product_dictionary[a_text]['in_out_stock'] = 'in_stock'
             else:
-                product_dictionary[p_text]['in_out_stock'] = 'in_stock'
+                product_dictionary[a_text]['in_out_stock'] = 'out_of_stock'
 
             # product_link
             try:
-                a_tag = soup.find(
                 href_link = a_tag['href']
-                product_dictionary[p_text]['product_link'] = href_link
-            except Exception as error:
+                product_dictionary[a_text]['product_link'] = f'https://switch.com.kw{href_link}'
+            except:
                 pass
 
             # product_image
             try:
-                img_tags = soup.find(
-                product_dictionary[p_text]['product_image'] = src_link
-            except Exception as error:
-                pass
+                img_tags = soup.find('img')
+                src_link = img_tags['src']
+                product_dictionary[a_text]['product_image'] = src_link
+            except:
+                pass 
 
     return product_dictionary
 

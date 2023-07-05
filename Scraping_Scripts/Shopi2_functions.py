@@ -32,7 +32,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 
 # [0] Obtains links from navbar
 
-def #_menu_crawl(main_URL, menu_items_list) -> list:
+def i2_menu_crawl(main_URL, menu_items_list) -> list:
 
     try:
         # Create driver instance
@@ -40,34 +40,23 @@ def #_menu_crawl(main_URL, menu_items_list) -> list:
         opts.add_argument("--start-maximized")
         driver = webdriver.Chrome(ChromeDriverManager().install(), options=opts)
         driver.get(main_URL)
-        time.sleep(3)
+        time.sleep(1)
 
         # Open menu
-        dropdown_menu = #
-        time.sleep(1)
-        dropdown_menu.click()
+        menu_div = driver.find_element_by_class_name("tt-header-holder")
         time.sleep(1)
 
-        HTML_master_block = []
-
-        # Open first link and obtain inner HTML
-        actions = ActionChains(driver)
-
-        for category in menu_items_list:
-            category_obj = #
-            actions.move_to_element(category_obj).perform()
-            list_item = #
-            html_content = list_item.get_attribute("innerHTML")
-            HTML_master_block.append(BeautifulSoup(html_content, 'html.parser'))
+        html_content = menu_div.get_attribute("innerHTML")
+        
+        HTML_master = BeautifulSoup(html_content, 'html.parser')
 
         driver.quit()
-
-        # HTML sub-category parsing
-        HREF_list = []
-        for HTML_soup in HTML_master_block:
-            HTML_soup_links = #
-            for h3_link in HTML_soup_links:
-                """"""
+        
+        # Link parsing
+        
+        HREF_list = [
+            anchor.get('href') for anchor in HTML_master.find_all('a') if any(category in str(anchor) for category in menu_items_list)
+        ]
 
         return HREF_list
     
@@ -83,10 +72,10 @@ def #_menu_crawl(main_URL, menu_items_list) -> list:
 
 # [A] Filters graves matching product class inheritance
 
-def #_filter_graves(graveyard) -> list:
+def i2_filter_graves(graveyard) -> list:
     
     # Step 2: Function to filter out only graves conforming to product div convention
-    filtered_graves = [grave for grave in graveyard if '' in grave]
+    filtered_graves = [grave for grave in graveyard if 'product photo product-item-photo' in grave]
 
     return filtered_graves
 
@@ -95,7 +84,7 @@ def #_filter_graves(graveyard) -> list:
 
 # [1] Creates a grave for a specific page
 
-def #_grave_list(crawl_URL) -> list:
+def i2_grave_list(crawl_URL) -> list:
     
     try:
         # Step 1: Pull page source and split into list items (products) graves; return as a grave list
@@ -107,22 +96,26 @@ def #_grave_list(crawl_URL) -> list:
         driver.get(crawl_URL)
         time.sleep(random_time)
         
+        option_30 = driver.find_element_by_xpath("//option[@value='30']")
+        option_30.click()
+        time.sleep(random_time)
+        
         try:
-            html_content = [driver.page_source]
+            product_div = driver.find_element_by_css_selector("div.products.wrapper.grid.products-grid")
+            html_content = [product_div.get_attribute("innerHTML")]
         except:
             print(f'Could not obtain site resources: {crawl_URL}')
-
-        js_code = "arguments[0].scrollIntoView(true); window.scrollBy(0, -200);"
 
         while True:
 
             try:
-
-                driver.execute_script(js_code, show_more)
+                
+                next_page = driver.find_element_by_css_selector("a.action.next")
+                next_page_href = next_page.get_attribute("href")
+                driver.get(next_page_href)
                 time.sleep(random_time)
- 
-                # ...
-                html_content.append(driver.page_source)
+                product_div = driver.find_element_by_css_selector("div.products.wrapper.grid.products-grid")
+                html_content.append(product_div.get_attribute("innerHTML"))
 
             except Exception as error:
                 print(f'{crawl_URL} page end detected')
@@ -131,7 +124,7 @@ def #_grave_list(crawl_URL) -> list:
         driver.quit()
 
         html_content = ' '.join(html_content)
-        list_graves = list(set(str(BeautifulSoup(html.unescape(html_content), 'html.parser')).split('<li class')))
+        list_graves = list(set(str(BeautifulSoup(html.unescape(html_content), 'html.parser')).split('<div class="item product product-item')))
 
         return list_graves
     
@@ -141,16 +134,16 @@ def #_grave_list(crawl_URL) -> list:
 
 # [2] Crawls through a list of links and creates product class filtered graves for each webpage: HEAVY OPERATION <ONLY RUN WHEN 100% SURE>
 
-def #_link_crawl(listed_links) -> list(list()):
+def i2_link_crawl(listed_links) -> list(list()):
     
     # Step 3: For each link in the list, perform grave_list splitting, filtering, and store in graveyard
-    filtered_graveyard = [_filter_graves(_grave_list(link)) for link in listed_links]
+    filtered_graveyard = [i2_filter_graves(i2_grave_list(link)) for link in listed_links]
     
     return filtered_graveyard
 
 # [3] Crawls through a graveyard of product class filtered graves and parses product information into a product dictionary
 
-def #_cemetary_product_parse(filtered_cemetary) -> dict:
+def i2_cemetary_product_parse(filtered_cemetary) -> dict:
     
     # Step 4: Parse information to build the product dictionary
     product_dictionary = {}
@@ -161,10 +154,11 @@ def #_cemetary_product_parse(filtered_cemetary) -> dict:
             soup = BeautifulSoup(filtered_grave, 'html.parser')
 
             # product_name
-            p_tag = #
-            p_text = p_tag.get_text(strip=True)
+            h2_tag = soup.find('h2', class_='tt-title')
+            a_tag = h2_tag.find('a')
+            a_text = a_tag.get_text(strip=True)
 
-            product_dictionary[p_text] = {
+            product_dictionary[a_text] = {
                 'product_brand':'', 
                 'product_price':'', 
                 'product_discount':'', 
@@ -174,62 +168,49 @@ def #_cemetary_product_parse(filtered_cemetary) -> dict:
                 'product_image':''
             }
 
-            # product_brand
+            # product_brand [will not always work]
             try:
-                h5_tag = soup.find(
-                h5_text = h5_tag.get_text(strip=True)
-                product_dictionary[p_text]['product_brand'] = h5_text
+                product_dictionary[a_text]['product_brand'] = a_text.split(' ')[0]
             except Exception as error:
                 pass
 
             # product_price
             try:
-                span_tag = soup.find(
+                span_tag = soup.find('span', class_='price')
                 span_text = span_tag.get_text(strip=True)
-                product_dictionary[p_text]['product_price'] = span_text
-            except Exception as error:
-                try:
-                    h4_tag = soup.find('h4')
-                    h4_text = h4_tag.get_text(strip=True)
-                    product_dictionary[p_text]['product_price'] = h4_text
-                except Exception as error:
-                    pass
-
-
-            # product_discount
-            try:
-                span_tag2 = soup.find(
-                span2_text = span_tag2.get_text(strip=True)
-                product_dictionary[p_text]['product_discount'] = span2_text
+                product_dictionary[a_text]['product_price'] = span_text
             except Exception as error:
                 pass
 
-            # price_before_discount
+
+            # product_discount [cannot retrieve this from image]
             try:
-                span_tag3 = soup.find(
-                span3_text = span_tag3.get_text(strip=True)
-                product_dictionary[p_text]['price_before_discount'] = span3_text
+                product_dictionary[a_text]['product_discount'] = ''
+            except Exception as error:
+                pass
+
+            # price_before_discount [cannot retrieve this from image]
+            try:
+                product_dictionary[a_text]['price_before_discount'] = ''
             except Exception as error:
                 pass
             
             # in_out_stock
-            if '' in str(soup):
-                product_dictionary[p_text]['in_out_stock'] = 'out_of_stock'
+            if '<span>ADD To Cart</span>' in str(soup):
+                product_dictionary[a_text]['in_out_stock'] = 'in_stock'
             else:
-                product_dictionary[p_text]['in_out_stock'] = 'in_stock'
+                product_dictionary[a_text]['in_out_stock'] = 'out_of_stock'
 
             # product_link
             try:
-                a_tag = soup.find(
-                href_link = a_tag['href']
-                product_dictionary[p_text]['product_link'] = href_link
+                product_dictionary[a_text]['product_link'] = a_tag['href']
             except Exception as error:
                 pass
 
             # product_image
             try:
-                img_tags = soup.find(
-                product_dictionary[p_text]['product_image'] = src_link
+                img_tag = soup.find('img', class_='product-image-photo')
+                product_dictionary[a_text]['product_image'] = img_tag['src']
             except Exception as error:
                 pass
 
