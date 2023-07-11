@@ -25,51 +25,33 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 
 # --- Menu crawling ---
 
 
-# [0] Obtains links from navbar
+# [0] Obtains links
 
-def #_menu_crawl(main_URL, menu_items_list) -> list:
+def stc_menu_crawl(main_URL) -> list:
 
     try:
         # Create driver instance
         opts = ChromeOptions()
         opts.add_argument("--start-maximized")
-        driver = webdriver.Chrome(ChromeDriverManager().install(), options=opts)
+        driver = webdriver.Chrome(driver_path, options=opts)
         driver.get(main_URL)
-        time.sleep(3)
-
-        # Open menu
-        dropdown_menu = #
-        time.sleep(1)
-        dropdown_menu.click()
         time.sleep(1)
 
-        HTML_master_block = []
-
-        # Open first link and obtain inner HTML
-        actions = ActionChains(driver)
-
-        for category in menu_items_list:
-            category_obj = #
-            actions.move_to_element(category_obj).perform()
-            list_item = #
-            html_content = list_item.get_attribute("innerHTML")
-            HTML_master_block.append(BeautifulSoup(html_content, 'html.parser'))
-
+        # STC category links
+        category_anchors = driver.find_elements_by_xpath("//a[text()='See all']")
+        
+        category_links   = [anchor.get_attribute('href') for anchor in category_anchors]
+        
         driver.quit()
 
-        # HTML sub-category parsing
-        HREF_list = []
-        for HTML_soup in HTML_master_block:
-            HTML_soup_links = #
-            for h3_link in HTML_soup_links:
-                """"""
-
-        return HREF_list
+        return category_links
     
     except Exception:
         print(Exception)
@@ -78,75 +60,68 @@ def #_menu_crawl(main_URL, menu_items_list) -> list:
 # --- Product parsing ---
 
 
-# Backend
-
-
-# [A] Filters graves matching product class inheritance
-
-def #_filter_graves(graveyard) -> list:
-    
-    # Step 2: Function to filter out only graves conforming to product div convention
-    filtered_graves = [grave for grave in graveyard if '' in grave]
-
-    return filtered_graves
-
 # Functional
 
 
-# [1] Creates a grave for a specific page
+# [1] Creates a grave for a specific page #WIP
 
-def #_grave_list(crawl_URL) -> list:
+def stc_grave_list(crawl_URL) -> list:
     
     try:
-        # Step 1: Pull page source and split into list items (products) graves; return as a grave list
-        random_time = round(random.uniform(1, 2),2)
-
+        # Open page
         opts = ChromeOptions()
         opts.add_argument("--start-maximized")
-        driver = webdriver.Chrome(ChromeDriverManager().install(), options=opts)
-        driver.get(crawl_URL)
-        time.sleep(random_time)
+        driver = webdriver.Chrome(driver_path, options=opts)
+        driver.get(Stc_URL)
         
-        try:
-            html_content = [driver.page_source]
-        except:
-            print(f'Could not obtain site resources: {crawl_URL}')
-
-        js_code = "arguments[0].scrollIntoView(true); window.scrollBy(0, -200);"
+        strip_crawl = crawl_URL.strip('https://www.stc.com.kw')
+        link = driver.find_element_by_xpath(f"//a[@href='/{strip_crawl}']")
+        link = link.get_attribute('href')
+        driver.get(link)
+        
+        time.sleep(5)
+        
+        js_down = "window.scrollTo(0, document.body.scrollHeight);"
+        js_clik = "arguments[0].click();"
 
         while True:
 
             try:
-
-                driver.execute_script(js_code, show_more)
-                time.sleep(random_time)
- 
-                # ...
-                html_content.append(driver.page_source)
-
+                driver.execute_script(js_down)
+                load_more = driver.find_element_by_xpath("//button[.//span[contains(text(), 'Load More')]]")
+                driver.execute_script(js_clik, load_more)
             except Exception as error:
                 print(f'{crawl_URL} page end detected')
                 break
+                
+        html_content = driver.find_elements_by_xpath("//div[contains(@class, 'col-12') and contains(@class, 'col-md-4') and contains(@class, 'col-lg-3')]")
 
+        list_graves = [div_content.get_attribute('innerHTML') for div_content in html_content] 
+        
         driver.quit()
-
-        html_content = ' '.join(html_content)
-        list_graves = list(set(str(BeautifulSoup(html.unescape(html_content), 'html.parser')).split('<li class')))
 
         return list_graves
     
     except Exception:
         print(Exception)
+        
+        
+# [1.1] Grave enhancement
+
+
+def enhance_grave():
+    --
 
 
 # [2] Crawls through a list of links and creates product class filtered graves for each webpage: HEAVY OPERATION <ONLY RUN WHEN 100% SURE>
 
-def #_link_crawl(listed_links) -> list(list()):
+def stc_link_crawl(listed_links) -> list(list()):
     
-    # Step 3: For each link in the list, perform grave_list splitting, filtering, and store in graveyard
-    filtered_graveyard = [_filter_graves(_grave_list(link)) for link in listed_links]
+    # stc_grave_list on each link
+    graveyard = [stc_grave_list(link) for link in stc_links]
     
-    return filtered_graveyard
+    return graveyard
+
 
 # [3] Crawls through a graveyard of product class filtered graves and parses product information into a product dictionary
 
