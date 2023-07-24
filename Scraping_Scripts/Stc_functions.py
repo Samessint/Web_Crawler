@@ -29,6 +29,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 
+driver_path = 'C:/Users/Sleepwalk/.cache/selenium/chromedriver/win32/114.0.5735.90/chromedriver.exe'
+
+
 # --- Menu crawling ---
 
 
@@ -109,8 +112,8 @@ def stc_grave_list(crawl_URL) -> list:
 # [1.1] Grave enhancement
 
 
-def enhance_grave():
-    --
+#def enhance_grave():
+#    --
 
 
 # [2] Crawls through a list of links and creates product class filtered graves for each webpage: HEAVY OPERATION <ONLY RUN WHEN 100% SURE>
@@ -125,7 +128,7 @@ def stc_link_crawl(listed_links) -> list(list()):
 
 # [3] Crawls through a graveyard of product class filtered graves and parses product information into a product dictionary
 
-def #_cemetary_product_parse(filtered_cemetary) -> dict:
+def stc_cemetary_product_parse(filtered_cemetary) -> dict:
     
     # Step 4: Parse information to build the product dictionary
     product_dictionary = {}
@@ -136,7 +139,7 @@ def #_cemetary_product_parse(filtered_cemetary) -> dict:
             soup = BeautifulSoup(filtered_grave, 'html.parser')
 
             # product_name
-            p_tag = #
+            p_tag = ''
             p_text = p_tag.get_text(strip=True)
 
             product_dictionary[p_text] = {
@@ -151,7 +154,7 @@ def #_cemetary_product_parse(filtered_cemetary) -> dict:
 
             # product_brand
             try:
-                h5_tag = soup.find(
+                h5_tag = soup.find()
                 h5_text = h5_tag.get_text(strip=True)
                 product_dictionary[p_text]['product_brand'] = h5_text
             except Exception as error:
@@ -159,7 +162,7 @@ def #_cemetary_product_parse(filtered_cemetary) -> dict:
 
             # product_price
             try:
-                span_tag = soup.find(
+                span_tag = soup.find()
                 span_text = span_tag.get_text(strip=True)
                 product_dictionary[p_text]['product_price'] = span_text
             except Exception as error:
@@ -173,7 +176,7 @@ def #_cemetary_product_parse(filtered_cemetary) -> dict:
 
             # product_discount
             try:
-                span_tag2 = soup.find(
+                span_tag2 = soup.find()
                 span2_text = span_tag2.get_text(strip=True)
                 product_dictionary[p_text]['product_discount'] = span2_text
             except Exception as error:
@@ -181,7 +184,7 @@ def #_cemetary_product_parse(filtered_cemetary) -> dict:
 
             # price_before_discount
             try:
-                span_tag3 = soup.find(
+                span_tag3 = soup.find()
                 span3_text = span_tag3.get_text(strip=True)
                 product_dictionary[p_text]['price_before_discount'] = span3_text
             except Exception as error:
@@ -195,7 +198,7 @@ def #_cemetary_product_parse(filtered_cemetary) -> dict:
 
             # product_link
             try:
-                a_tag = soup.find(
+                a_tag = soup.find()
                 href_link = a_tag['href']
                 product_dictionary[p_text]['product_link'] = href_link
             except Exception as error:
@@ -203,7 +206,7 @@ def #_cemetary_product_parse(filtered_cemetary) -> dict:
 
             # product_image
             try:
-                img_tags = soup.find(
+                img_tags = soup.find()
                 product_dictionary[p_text]['product_image'] = src_link
             except Exception as error:
                 pass
